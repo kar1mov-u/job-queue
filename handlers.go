@@ -10,8 +10,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cfg *Config) PostJob(w http.ResponseWriter, r *http.Request) {
-	data := NewJobRequest{}
+func (cfg *Config) PostTransac(w http.ResponseWriter, r *http.Request) {
+	data := TransactionData{}
+
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		respondWithErr(w, 500, err.Error())
@@ -21,12 +22,13 @@ func (cfg *Config) PostJob(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithErr(w, 500, err.Error())
 	}
+	cfg.Channel <- WorkerData{transsaction: data, workID: dbObj}
 
 	respondWithJson(w, 200, map[string]uuid.UUID{"id": dbObj})
 
 }
 
-func (cfg *Config) GetTasks(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) GetTransacs(w http.ResponseWriter, r *http.Request) {
 	start := r.URL.Query().Get("from")
 	end := r.URL.Query().Get("to")
 	startTime, err := time.Parse(time.RFC3339, start)
