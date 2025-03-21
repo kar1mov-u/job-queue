@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"jqueue/internal/database"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -26,4 +28,12 @@ type WorkerData struct {
 type Config struct {
 	DB      *database.Queries
 	Channel chan WorkerData
+}
+
+type Worker struct {
+	ID      int
+	CTX     context.Context
+	DB      *database.Queries
+	JobCHan chan WorkerData
+	Wait    *sync.WaitGroup
 }

@@ -22,6 +22,7 @@ func (cfg *Config) PostTransac(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithErr(w, 500, err.Error())
 	}
+	//send data to queue
 	cfg.Channel <- WorkerData{transsaction: data, workID: dbObj}
 
 	respondWithJson(w, 200, map[string]uuid.UUID{"id": dbObj})
@@ -47,6 +48,24 @@ func (cfg *Config) GetTransacs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithErr(w, 500, err.Error())
 	}
-	respondWithJson(w, 200, tasksDb)
+	type respBody struct {
+		ID          string    `json:"id"`
+		CreatedAt   time.Time `json:"created_at"`
+		CompletedAt time.Time `json:"updated_at"`
+		Status      string    `json:"status"`
+		Link        string    `json:"link"`
+	}
+	respTasks := []respBody{}
+	for _, taskDb := range tasksDb {
+		task := respBody{
+			ID:          taskDb.ID.String(),
+			CreatedAt:   taskDb.CreatedAt.Time,
+			CompletedAt: taskDb.CompletedAt.Time,
+			Status:      taskDb.Status,
+			Link:        taskDb.Link.String,
+		}
+		respTasks = append(respTasks, task)
+	}
+	respondWithJson(w, 200, respTasks)
 
 }

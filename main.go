@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"jqueue/internal/database"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -22,18 +24,27 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//Create SQLC instance
 	dbQueries := database.New(db)
+	//queue to tasks
 	ch := make(chan WorkerData, 10)
 	cfg := Config{
 		DB:      dbQueries,
 		Channel: ch,
 	}
 
+	//context to workers
+	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	//initaiting workers
+	workers := make([]*Worker, 5)
 	for i := 1; i < 6; i++ {
-		go worker(ctx, cfg.Channel, i)
+		wg.Add(1)
+		fmt.Println("starting worker ", i)
+		workers[i-1] = NewWorker(i, ctx, dbQueries, cfg.Channel, &wg)
+		go workers[i-1].Run()
 	}
 
 	router := chi.NewRouter()
@@ -48,6 +59,8 @@ func main() {
 		Handler: router,
 		Addr:    ":9090",
 	}
+
+	// handling shutdonw
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
@@ -56,7 +69,8 @@ func main() {
 		log.Println("Killing all workers...")
 		cancel()
 		close(cfg.Channel)
-		os.Exit(1)
+		wg.Wait()
+		os.Exit(0)
 	}()
 
 	log.Println("listening on :9090")
