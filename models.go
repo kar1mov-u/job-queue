@@ -4,7 +4,9 @@ import (
 	"context"
 	"jqueue/internal/database"
 	"sync"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 )
 
@@ -31,9 +33,18 @@ type Config struct {
 }
 
 type Worker struct {
-	ID      int
-	CTX     context.Context
-	DB      *database.Queries
-	JobCHan chan WorkerData
-	Wait    *sync.WaitGroup
+	ID       int
+	CTX      context.Context
+	DB       *database.Queries
+	JobCHan  chan WorkerData
+	Wait     *sync.WaitGroup
+	S3Client *s3.Client
+}
+
+type respBody struct {
+	ID          string    `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	CompletedAt time.Time `json:"updated_at"`
+	Status      string    `json:"status"`
+	Link        string    `json:"link"`
 }

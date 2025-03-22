@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"bytes"
 
 	"github.com/jung-kurt/gofpdf"
 )
 
-func generatePDF(data WorkerData) {
-	fmt.Println("generating job with id: ", data.workID)
+func generatePDF(data WorkerData) (*bytes.Reader, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(10, 10, 10)
 	pdf.AddPage()
@@ -46,9 +44,14 @@ func generatePDF(data WorkerData) {
 	addRow("Total:", data.transsaction.Total)
 	pdf.Ln(5)
 
-	err := pdf.OutputFileAndClose(data.transsaction.TransactionId + ".pdf")
+	// Write PDF to the buffer
+
+	var pdfBuff bytes.Buffer
+	err := pdf.Output(&pdfBuff)
 	if err != nil {
-		log.Print("Failed on transaction" + data.transsaction.TransactionId)
+		return nil, err
 	}
+	reader := bytes.NewReader(pdfBuff.Bytes())
+	return reader, nil
 
 }

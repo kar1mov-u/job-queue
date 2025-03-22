@@ -12,6 +12,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const completeTask = `-- name: CompleteTask :exec
+UPDATE tasks SET status = $1, completed_at = NOW(), link = $2 WHERE  id=$3
+`
+
+type CompleteTaskParams struct {
+	Status string
+	Link   sql.NullString
+	ID     uuid.UUID
+}
+
+func (q *Queries) CompleteTask(ctx context.Context, arg CompleteTaskParams) error {
+	_, err := q.db.ExecContext(ctx, completeTask, arg.Status, arg.Link, arg.ID)
+	return err
+}
+
 const createTask = `-- name: CreateTask :one
 INSERT INTO tasks(
     status) VALUES($1)
@@ -23,6 +38,23 @@ func (q *Queries) CreateTask(ctx context.Context, status string) (uuid.UUID, err
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getTask = `-- name: GetTask :one
+SELECT id, created_at, completed_at, status, link FROM tasks WHERE id=$1
+`
+
+func (q *Queries) GetTask(ctx context.Context, id uuid.UUID) (Task, error) {
+	row := q.db.QueryRowContext(ctx, getTask, id)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.CompletedAt,
+		&i.Status,
+		&i.Link,
+	)
+	return i, err
 }
 
 const getTasks = `-- name: GetTasks :many

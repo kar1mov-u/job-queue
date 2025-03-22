@@ -12,3 +12,9 @@ ORDER BY created_at ASC;
 
 -- name: UpdateStatus :exec
 UPDATE tasks SET status = $1 WHERE id=$2;
+
+-- name: CompleteTask :exec
+UPDATE tasks SET status = $1, completed_at = NOW(), link = $2 WHERE  id=$3;
+
+-- name: GetTask :one 
+SELECT * FROM tasks WHERE id=$1;

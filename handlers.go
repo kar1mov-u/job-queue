@@ -3,10 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"jqueue/internal/database"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 )
 
@@ -48,13 +51,7 @@ func (cfg *Config) GetTransacs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithErr(w, 500, err.Error())
 	}
-	type respBody struct {
-		ID          string    `json:"id"`
-		CreatedAt   time.Time `json:"created_at"`
-		CompletedAt time.Time `json:"updated_at"`
-		Status      string    `json:"status"`
-		Link        string    `json:"link"`
-	}
+
 	respTasks := []respBody{}
 	for _, taskDb := range tasksDb {
 		task := respBody{
@@ -68,4 +65,30 @@ func (cfg *Config) GetTransacs(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJson(w, 200, respTasks)
 
+}
+
+func (cfg *Config) GetTask(w http.ResponseWriter, r *http.Request) {
+	taskIdStr := chi.URLParam(r, "TaskId")
+	taskId, err := uuid.Parse(taskIdStr)
+	if err != nil {
+		respondWithErr(w, http.StatusBadRequest, "ID should be valid UUID")
+		return
+	}
+	dbTask, err := cfg.DB.GetTask(r.Context(), taskId)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondWithErr(w, 404, "no task found")
+		return
+	} else if err != nil {
+		log.Println("Error on hadnler GetTask: ", err)
+		respondWithErr(w, 500, err.Error())
+		return
+	}
+	resp := respBody{
+		ID:          dbTask.ID.String(),
+		CreatedAt:   dbTask.CreatedAt.Time,
+		CompletedAt: dbTask.CompletedAt.Time,
+		Status:      dbTask.Status,
+		Link:        dbTask.Link.String,
+	}
+	respondWithJson(w, 200, resp)
 }

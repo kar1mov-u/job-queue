@@ -35,15 +35,21 @@ func main() {
 
 	//context to workers
 	var wg sync.WaitGroup
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	s3Client, err := createS3Client(os.Getenv("AWS_REGION"))
+	if err != nil {
+		log.Fatal("Failed on creating s3 client: ", err)
+	}
 
 	//initaiting workers
 	workers := make([]*Worker, 5)
 	for i := 1; i < 6; i++ {
 		wg.Add(1)
 		fmt.Println("starting worker ", i)
-		workers[i-1] = NewWorker(i, ctx, dbQueries, cfg.Channel, &wg)
+		workers[i-1] = NewWorker(i, ctx, dbQueries, cfg.Channel, &wg, s3Client)
 		go workers[i-1].Run()
 	}
 
@@ -54,6 +60,7 @@ func main() {
 	})
 	router.Post("/transaction", cfg.PostTransac)
 	router.Get("/transactions", cfg.GetTransacs)
+	router.Get("/transactions/{TaskId}", cfg.GetTask)
 
 	srv := http.Server{
 		Handler: router,
